@@ -8,18 +8,23 @@ const http_1 = __importDefault(require("http"));
 const ws_1 = __importDefault(require("ws"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const crypto_1 = require("crypto");
+// Create a new express app instance
 const app = (0, express_1.default)();
+// Parse JSON bodies
 const jsonParser = body_parser_1.default.json();
-//initialize a simple http server
+// Create a new HTTP server
 const server = http_1.default.createServer(app);
-//initialize the WebSocket server instance
+// Create a new WebSocket server
 const wss = new ws_1.default.Server({ server });
 app.post("/webhook", jsonParser, (req, res) => {
+    // Broadcast the notification to all connected clients
+    // In a real app, you would probably want to send to specific clients
     wss.clients.forEach((client) => {
         if (client.readyState === ws_1.default.OPEN) {
             client.send(JSON.stringify({
                 id: (0, crypto_1.randomUUID)(),
                 type: "notification",
+                // Encode the data from the webhook into the message
                 data: {
                     title: req.body.data.title,
                     message: req.body.data.message,
@@ -30,12 +35,13 @@ app.post("/webhook", jsonParser, (req, res) => {
     });
     res.sendStatus(200);
 });
+// Handle new WebSocket connections
 wss.on("connection", (ws) => {
     // Acknowledge connection
     ws.send(JSON.stringify({ id: (0, crypto_1.randomUUID)(), type: "connection", data: null }));
 });
 const port = process.env.PORT || 8999;
-//start our server
+// Start the server
 server.listen(port, () => {
     console.log(`Server started on port ${port}`);
 });
