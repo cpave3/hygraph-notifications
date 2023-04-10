@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const ws_1 = __importDefault(require("ws"));
 const body_parser_1 = __importDefault(require("body-parser"));
+const crypto_1 = require("crypto");
 const app = (0, express_1.default)();
 const jsonParser = body_parser_1.default.json();
 //initialize a simple http server
@@ -17,28 +18,25 @@ app.post("/webhook", jsonParser, (req, res) => {
     wss.clients.forEach((client) => {
         if (client.readyState === ws_1.default.OPEN) {
             client.send(JSON.stringify({
+                id: (0, crypto_1.randomUUID)(),
                 type: "notification",
-                title: req.body.data.title,
-                message: req.body.data.message,
+                data: {
+                    title: req.body.data.title,
+                    message: req.body.data.message,
+                    intent: req.body.data.intent,
+                },
             }));
         }
     });
-    console.log("webhook called", req);
     res.sendStatus(200);
 });
 wss.on("connection", (ws) => {
-    //connection is up, let's add a simple simple event
-    ws.on("message", (message) => {
-        //log the received message and send it back to the client
-        console.log("received: %s", message);
-        ws.send(`Hello, you sent -> ${message}`);
-    });
-    //send immediatly a feedback to the incoming connection
-    ws.send("Hi there, I am a WebSocket server");
+    // Acknowledge connection
+    ws.send(JSON.stringify({ id: (0, crypto_1.randomUUID)(), type: "connection", data: null }));
 });
 const port = process.env.PORT || 8999;
 //start our server
 server.listen(port, () => {
-    console.log(`Server started on port ${port} :)`);
+    console.log(`Server started on port ${port}`);
 });
 //# sourceMappingURL=index.js.map

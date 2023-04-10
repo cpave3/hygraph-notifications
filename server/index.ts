@@ -2,48 +2,51 @@ import express from "express";
 import http from "http";
 import WebSocket from "ws";
 import bodyParser from "body-parser";
+import { randomUUID } from "crypto";
 
+// Create a new express app instance
 const app = express();
 
+// Parse JSON bodies
 const jsonParser = bodyParser.json();
 
-//initialize a simple http server
+// Create a new HTTP server
 const server = http.createServer(app);
 
-//initialize the WebSocket server instance
+// Create a new WebSocket server
 const wss = new WebSocket.Server({ server });
 
 app.post("/webhook", jsonParser, (req, res) => {
+  // Broadcast the notification to all connected clients
+  // In a real app, you would probably want to send to specific clients
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(
         JSON.stringify({
-          type: "notification",
-          title: req.body.data.title,
-          message: req.body.data.message,
+          id: randomUUID(), // Generate a random ID for the message
+          type: "notification", // Give the message a type
+          // Encode the data from the webhook into the message
+          data: {
+            title: req.body.data.title,
+            message: req.body.data.message,
+            intent: req.body.data.intent,
+          },
         })
       );
     }
   });
-  console.log("webhook called", req);
   res.sendStatus(200);
 });
 
+// Handle new WebSocket connections
 wss.on("connection", (ws: WebSocket) => {
-  //connection is up, let's add a simple simple event
-  ws.on("message", (message: string) => {
-    //log the received message and send it back to the client
-    console.log("received: %s", message);
-    ws.send(`Hello, you sent -> ${message}`);
-  });
-
-  //send immediatly a feedback to the incoming connection
-  ws.send("Hi there, I am a WebSocket server");
+  // Acknowledge connection
+  ws.send(JSON.stringify({ id: randomUUID(), type: "connection", data: null }));
 });
 
 const port = process.env.PORT || 8999;
 
-//start our server
+// Start the server
 server.listen(port, () => {
-  console.log(`Server started on port ${port} :)`);
+  console.log(`Server started on port ${port}`);
 });
